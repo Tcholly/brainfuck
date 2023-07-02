@@ -176,6 +176,40 @@ void eval(char* code, size_t len)
 	}
 }
 
+size_t remove_garbage(char* code, size_t len)
+{
+	int garbage_start = -1;
+	for (size_t i = 0; i < len; i++)
+	{
+		switch (code[i])
+		{
+			case '>':
+			case '<':
+			case '+':
+			case '-':
+			case '[':
+			case ']':
+			case '.':
+			case ',':
+				if (garbage_start >= 0)
+				{
+					memmove(code + garbage_start, code + i, len - i);
+					int garbage_len = i - garbage_start;
+					len -= garbage_len;
+					i -= garbage_len;
+					garbage_start = -1;
+				}
+				break;
+
+			default:
+				if (garbage_start < 0)
+					garbage_start = i;
+		}
+	}
+
+	return len;
+}
+
 void print_non_zero_cells()
 {
 	for (int i = 0; i < CELL_NUMBER; i++)
@@ -225,12 +259,14 @@ int main(int argc, char** argv)
 	size_t file_size = ftell(file);
 	rewind(file);
 
-	char* content_buff = malloc(file_size + 1);
+	char* content_buff = malloc(file_size /*+ 1*/);
 	
 	fread(content_buff, 1, file_size, file);
-	content_buff[file_size] = '\0';
+	// content_buff[file_size] = '\0';
 	fclose(file);
 
+	file_size = remove_garbage(content_buff, file_size);
+	// printf("%.*s", (int)file_size, content_buff);
 	eval(content_buff, file_size);
 	printf("\n----------------\n");
 	print_non_zero_cells();
