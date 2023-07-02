@@ -13,10 +13,38 @@
 int8_t cells[CELL_NUMBER] = {0};
 int current_cell = 0;
 
+typedef struct
+{
+	int left, right;
+} bracket_pair_t;
+
+#define BRACKET_CACHE_MAX 64
+bracket_pair_t bracket_cache[BRACKET_CACHE_MAX] = {0};
+int bracket_pair_count = 0;
+
 
 int find_matching_bracket(char* code, size_t len, int current_index)
 {
 	char current = code[current_index];
+	for (int i = 0; i < bracket_pair_count; i++)
+	{
+		switch (current)
+		{
+			case '[':
+				if (bracket_cache[i].left == current_index)
+					return bracket_cache[i].right;
+				break;
+			case ']':
+				if (bracket_cache[i].right == current_index)
+					return bracket_cache[i].left;
+				break;
+
+			default:
+				return -1;
+		}
+	}
+
+	bracket_pair_t to_cache = {0};
 
 	int increment = 0;
 	char from = 0, to = 0;
@@ -26,11 +54,13 @@ int find_matching_bracket(char* code, size_t len, int current_index)
 			increment = 1;
 			from = '[';
 			to = ']';
+			to_cache.left = current_index;
 			break;
 		case ']':
 			increment = -1;
 			from = ']';
 			to = '[';
+			to_cache.right = current_index;
 			break;
 
 		default:
@@ -46,7 +76,29 @@ int find_matching_bracket(char* code, size_t len, int current_index)
 		else if (code[current_index] == to)
 		{
 			if (nesting == 0)
+			{
+
+				switch (current)
+				{
+					case '[':
+						to_cache.right = current_index;
+						break;
+					case ']':
+						to_cache.left = current_index;
+						break;
+
+					default:
+						return -1;
+				}
+				
+				if (bracket_pair_count < BRACKET_CACHE_MAX)
+				{
+					bracket_cache[bracket_pair_count] = to_cache;
+					bracket_pair_count++;
+				}
+
 				return current_index;
+			}
 			nesting--;
 		}
 		current_index += increment;
