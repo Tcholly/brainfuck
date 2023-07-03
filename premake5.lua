@@ -24,8 +24,11 @@ project "brainfuck"
 
     includedirs {
 		"src",
+		"Dependencies/raylib/include"
     }
 
-    libdirs { }
+	libdirs {
+		"Dependencies/raylib/lib"
+	}
 
-    links { }
+    links { "raylib", "m" }

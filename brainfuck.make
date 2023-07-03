@@ -19,11 +19,11 @@ endif
 # #############################################
 
 RESCOMP = windres
-INCLUDES += -Isrc
+INCLUDES += -Isrc -IDependencies/raylib/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-LIBS +=
+LIBS += -lraylib -lm
 LDDEPS +=
 LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
 define PREBUILDCMDS
@@ -40,7 +40,7 @@ OBJDIR = obj/brainfuck/Debug
 DEFINES += -D_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64
+ALL_LDFLAGS += $(LDFLAGS) -LDependencies/raylib/lib -L/usr/lib64 -m64
 
 else ifeq ($(config),release)
 TARGETDIR = bin/brainfuck/Release
@@ -49,7 +49,7 @@ OBJDIR = obj/brainfuck/Release
 DEFINES +=
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -Wall -Wextra
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -Wall -Wextra
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -LDependencies/raylib/lib -L/usr/lib64 -m64 -s
 
 endif
 
@@ -64,7 +64,9 @@ GENERATED :=
 OBJECTS :=
 
 GENERATED += $(OBJDIR)/main.o
+GENERATED += $(OBJDIR)/ui.o
 OBJECTS += $(OBJDIR)/main.o
+OBJECTS += $(OBJDIR)/ui.o
 
 # Rules
 # #############################################
@@ -129,6 +131,9 @@ endif
 # #############################################
 
 $(OBJDIR)/main.o: src/main.c
+	@echo "$(notdir $<)"
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ui.o: src/ui.c
 	@echo "$(notdir $<)"
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
