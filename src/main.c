@@ -6,6 +6,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
 #include <raylib.h>
 
 #include "ui.h"
@@ -33,16 +34,44 @@ size_t instruction_index = 0;
 // UI data
 bool enable_ui = false;
 int viewing_cell = -1;
-
+#define LOG_OUTPUT_MAX 512
+char log_output[LOG_OUTPUT_MAX] = {0};
+int log_len = 0;
+bool run_code = false;
+bool code_done = false;
+bool should_get_status = false;
 
 void send_to_output(char ch)
 {
 	if (enable_ui)
 	{
-		// TODO:
+		if (log_len < LOG_OUTPUT_MAX)
+		{
+			log_output[log_len] = ch;
+			log_len++;
+		}
+		else
+		{
+			memmove(log_output, log_output + 1, LOG_OUTPUT_MAX - 1);
+			log_output[log_len - 1] = ch;
+		}
 	}
-	else
+	// else
 		fputc(ch, stdout);
+}
+
+char get_input()
+{
+	if (enable_ui)
+	{
+		// return 0;
+	}
+	// else
+	{
+		char result = 0;
+		scanf("%c", &result);
+		return result;
+	}
 }
 
 
@@ -203,6 +232,34 @@ void eval(char* code, size_t len)
 	}
 }
 
+typedef struct
+{
+	char* code;
+	size_t len;
+} thread_params_t;
+
+void* run_threaded(void* args)
+{
+	thread_params_t* params = (thread_params_t*)args;
+
+	while (!code_done)
+	{
+		if (should_get_status)
+			continue;
+
+		if (run_code)
+		{
+			step(params->code, params->len);
+			instruction_index++;
+
+			if (instruction_index >= params->len)
+				code_done = true;
+		}
+	}
+
+	return NULL;
+}
+
 size_t remove_garbage(char* code, size_t len)
 {
 	int garbage_start = -1;
@@ -244,6 +301,14 @@ void reset_state(void)
 
 	for (int i = 0; i < CELL_NUMBER; i++)
 		cells[i] = 0;
+
+	if (enable_ui)
+	{
+		for (int i = 0; i < log_len; i++)
+			log_output[i] = 0;
+
+		log_len = 0;
+	}
 }
 
 void print_non_zero_cells()
@@ -329,13 +394,19 @@ int main(int argc, char** argv)
 	{
 		InitUI();
 
-		bool run_code = false;
-		bool code_done = false;
+		pthread_t thread = {0};
+		thread_params_t params = { .code = content_buff, .len = file_size };
+		int thread_error = pthread_create(&thread, NULL, run_threaded, &params);
+		if (thread_error)
+		{
+			TraceLog(LOG_ERROR, "Failed to create run thread, running in sync with frames"); 
+		}
+
 
 		while (!WindowShouldClose())
 		{
 
-			if ((IsKeyPressed(KEY_SPACE) || run_code) && !code_done)
+			if ((IsKeyPressed(KEY_SPACE) || run_code) && !code_done && thread_error)
 			{
 				step(content_buff, file_size);
 				instruction_index++;
@@ -353,6 +424,12 @@ int main(int argc, char** argv)
 					run_code = true;
 					code_done = false;
 					reset_state();
+					pthread_join(thread, NULL);
+					thread_error = pthread_create(&thread, NULL, run_threaded, &params);
+					if (thread_error)
+					{
+						TraceLog(LOG_ERROR, "Failed to create run thread, running in sync with frames"); 
+					}
 				}
 
 			}
@@ -382,12 +459,26 @@ int main(int argc, char** argv)
 
 			BeginDrawing();
 			ClearBackground(WHITE);
+
+			should_get_status = true;
 			
+			// TODO: Draw proprer ui: if code is too long it overlaps with the rest
 			DrawRectangleLines(0, 0, GetScreenWidth(), GetScreenHeight(), RED);
-			DrawCode(content_buff, file_size, instruction_index);
+			DrawTextSpecial(content_buff, file_size, instruction_index, (Vector2){10.0f, 10.0f});
+			DrawTextSpecial(log_output, log_len, -1, (Vector2){10.0f, GetScreenHeight() / 2.0f + 100.0f});
 			DrawCells(cells, current_cell, viewing_cell, CELL_NUMBER, GetScreenHeight() / 2, 100);
 
+			should_get_status = false;
+
 			EndDrawing();
+		}
+
+		CloseWindow();
+		code_done = true;
+
+		if (pthread_join(thread, NULL))
+		{
+			TraceLog(LOG_ERROR, "Failed to join thread"); 
 		}
 	}
 	// printf("%.*s", (int)file_size, content_buff);

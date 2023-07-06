@@ -9,23 +9,30 @@ void InitUI()
 	SetTargetFPS(60);
 }
 
-void DrawCode(const char* code, size_t len, int instruction_index)
+void DrawTextSpecial(const char* text, size_t len, int instruction_index, Vector2 pos)
 {
-	Vector2 current_pos = { 10.0f, 10.0f };
+	float pos_x = pos.x;
+	// Vector2 pos = { 10.0f, 10.0f };
 	for (int i = 0; i < (int)len; i++)
 	{
 		Color text_color = BLACK;
 		if (i == instruction_index)
 			text_color = GREEN;
 
-		// Vector2 text_size = MeasureChar(code[i], 20);
-		DrawTextCodepoint(GetFontDefault(), code[i], current_pos, 20, text_color);
-		current_pos.x += 14.0f;
-
-		if (current_pos.x > GetScreenWidth() - 10.0f)
+		if (text[i] == '\n')
 		{
-			current_pos.x = 10.0f;
-			current_pos.y += 20.0f * 1.5f;
+			pos.x = pos_x;
+			pos.y += 20.0f * 1.5f;
+			continue;
+		}
+		// Vector2 text_size = MeasureChar(code[i], 20);
+		DrawTextCodepoint(GetFontDefault(), text[i], pos, 20, text_color);
+		pos.x += 14.0f;
+
+		if (pos.x > GetScreenWidth() - 10.0f)
+		{
+			pos.x = pos_x;
+			pos.y += 20.0f * 1.5f;
 		}
 
 	}

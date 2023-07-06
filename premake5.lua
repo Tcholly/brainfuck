@@ -31,4 +31,4 @@ project "brainfuck"
 		"Dependencies/raylib/lib"
 	}
 
-    links { "raylib", "m" }
+    links { "raylib", "m", "pthread" }
